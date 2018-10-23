@@ -186,12 +186,6 @@ def _mkdir_recursive(self, path):
     if not os.path.exists(path):
         os.mkdir(path)
 
-def http_restart_nagios(req, objid, reqobj):
-    if not send_nagios_command('RESTART_PROGRAM'):
-        return json_error(req, 'Restart failed.')
-    else:
-        return json_response(req, 'Restart successful')
-
 def http_send_raw_command(req, objid, reqobj):
     command = reqobj['command']
     if not command:
@@ -201,49 +195,6 @@ def http_send_raw_command(req, objid, reqobj):
         return json_error(req, "Nagios command failed")
 
     return json_response(req, "Nagios command succeeded")
-
-def http_update_host(req, objid, reqobj):
-
-    global CFG_DIRECTORY
-
-    _mkdir_recursive(None, CFG_DIRECTORY)
-    file_name = reqobj['file_name']
-    text = reqobj['text']
-
-    if not file_name:
-        return json_error(req, 'No file path specified.')
-
-    if not text:
-        return json_error(req, 'No text specified.')
-
-    file_path = CFG_DIRECTORY + "/" + file_name
-
-    if os.path.isfile(file_path):
-        os.remove(file_path)
-
-    try:
-        f = file(file_path, 'w')
-        f.write(text)
-        f.close()
-
-        sys.stdout.write("file saved %s " % file_name)
-
-        uid = pwd.getpwnam("nagios").pw_uid
-        gid = grp.getgrnam("nagios").gr_gid
-
-        if uid and gid:
-            os.chown(file_path, uid, gid)
-
-        ret = {}
-        ret['message'] = "Update file "+file_path
-        return json_response(req, ret)
-    except Exception as e:
-        sys.stderr.write("%s\n" % e)
-        sys.stderr.write("Unable to write file: %s\n" % file_name)
-
-        ret = {}
-        ret['message'] = "Unable to write file: "+file_path
-        return json_response(req, ret)
 
 
 def http_service(req, objid, reqobj):
@@ -278,141 +229,6 @@ def http_log(req, objid, reqobj):
     if not LOG_ENABLED:
         return json_error(req, 'Log file parsing is not enabled on nagios-api.')
     return json_response(req, NLOG)
-
-
-def http_disable_notifications(req, objid, reqobj):
-    '''Given a service or host, disable notifications for it.
-
-    If you specify the host parameter and also set 'services_too' to
-    true, we will act on the host and all of the services on it.
-
-    '''
-    global NAGIOS, CMD_ENABLED
-    if not CMD_ENABLED:
-        return json_error(req, 'External commands not enabled on nagios-api.')
-    if objid is not None:
-        return json_error(req, 'Unexpected object ID.')
-
-    host = reqobj.get('host')
-    service = reqobj.get('service')
-    services_too = reqobj.get('services_too', False)
-
-    obj = NAGIOS.host_or_service(host, service)
-    if obj is None:
-        return json_error(req, 'Host or service not found.')
-
-    now = int(time.time())
-    if obj.service is not None:
-        if not send_nagios_command('DISABLE_SVC_NOTIFICATIONS', host, service):
-            return json_error(req, 'Failed sending command to Nagios.')
-    else:
-        if not send_nagios_command('DISABLE_HOST_NOTIFICATIONS', host):
-            return json_error(req, 'Failed sending command to Nagios.')
-        if services_too:
-            if not send_nagios_command('DISABLE_HOST_SVC_NOTIFICATIONS', host):
-                return json_error(req, 'Failed sending command to Nagios.')
-    return json_response(req, 'disabled')
-
-
-def http_enable_notifications(req, objid, reqobj):
-    '''Given a service or host, enable notifications for it.
-
-    If you specify the host parameter and also set 'services_too' to
-    true, we will act on the host and all of the services on it.
-
-    '''
-    global NAGIOS, CMD_ENABLED
-    if not CMD_ENABLED:
-        return json_error(req, 'External commands not enabled on nagios-api.')
-    if objid is not None:
-        return json_error(req, 'Unexpected object ID.')
-
-    host = reqobj.get('host')
-    service = reqobj.get('service')
-    services_too = reqobj.get('services_too', False)
-
-    obj = NAGIOS.host_or_service(host, service)
-    if obj is None:
-        return json_error(req, 'Host or service not found.')
-
-    now = int(time.time())
-    if obj.service is not None:
-        if not send_nagios_command('ENABLE_SVC_NOTIFICATIONS', host, service):
-            return json_error(req, 'Failed sending command to Nagios.')
-    else:
-        if not send_nagios_command('ENABLE_HOST_NOTIFICATIONS', host):
-            return json_error(req, 'Failed sending command to Nagios.')
-        if services_too:
-            if not send_nagios_command('ENABLE_HOST_SVC_NOTIFICATIONS', host):
-                return json_error(req, 'Failed sending command to Nagios.')
-    return json_response(req, 'enabled')
-
-def http_disable_checks(req, objid, reqobj):
-    '''Given a service or host, disable active checks for it.
-
-    If you specify the host parameter and also set 'services_too' to
-    true, we will act on the host and all of the services on it.
-
-    '''
-    global NAGIOS, CMD_ENABLED
-    if not CMD_ENABLED:
-        return json_error(req, 'External commands not enabled on nagios-api.')
-    if objid is not None:
-        return json_error(req, 'Unexpected object ID.')
-
-    host = reqobj.get('host')
-    service = reqobj.get('service')
-    services_too = reqobj.get('services_too', False)
-
-    obj = NAGIOS.host_or_service(host, service)
-    if obj is None:
-        return json_error(req, 'Host or service not found.')
-
-    now = int(time.time())
-    if obj.service is not None:
-        if not send_nagios_command('DISABLE_SVC_CHECK', host, service):
-            return json_error(req, 'Failed sending command to Nagios.')
-    else:
-        if not send_nagios_command('DISABLE_HOST_CHECK', host):
-            return json_error(req, 'Failed sending command to Nagios.')
-        if services_too:
-            if not send_nagios_command('DISABLE_HOST_SVC_CHECKS', host):
-                return json_error(req, 'Failed sending command to Nagios.')
-    return json_response(req, 'disabled')
-
-
-def http_enable_checks(req, objid, reqobj):
-    '''Given a service or host, enable active check for it.
-
-    If you specify the host parameter and also set 'services_too' to
-    true, we will act on the host and all of the services on it.
-
-    '''
-    global NAGIOS, CMD_ENABLED
-    if not CMD_ENABLED:
-        return json_error(req, 'External commands not enabled on nagios-api.')
-    if objid is not None:
-        return json_error(req, 'Unexpected object ID.')
-
-    host = reqobj.get('host')
-    service = reqobj.get('service')
-    services_too = reqobj.get('services_too', False)
-
-    obj = NAGIOS.host_or_service(host, service)
-    if obj is None:
-        return json_error(req, 'Host or service not found.')
-
-    now = int(time.time())
-    if obj.service is not None:
-        if not send_nagios_command('ENABLE_SVC_CHECK', host, service):
-            return json_error(req, 'Failed sending command to Nagios.')
-    else:
-        if not send_nagios_command('ENABLE_HOST_CHECK', host):
-            return json_error(req, 'Failed sending command to Nagios.')
-        if services_too:
-            if not send_nagios_command('ENABLE_HOST_SVC_CHECKS', host):
-                return json_error(req, 'Failed sending command to Nagios.')
-    return json_response(req, 'enabled')
 
 
 def http_schedule_downtime(req, objid, reqobj):
@@ -519,7 +335,6 @@ def http_cancel_downtime(req, objid, reqobj):
         return json_response(req, 'none found')
 
 
-
 def http_schedule_hostgroup_downtime(req, objid, reqobj):
     '''Given a hostgroup, schedule downtime for all the hosts in the hostgroup.
     The main mode for this API is to schedule a hard downtime that starts now and ends
@@ -568,7 +383,40 @@ def http_schedule_hostgroup_downtime(req, objid, reqobj):
             return json_error(req, 'Failed sending command to Nagios.')
     return json_response(req, 'scheduled')
 
+def http_schedule_servicegroup_downtime(req, objid, reqobj):
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+    if objid is not None:
+        return json_error(req, 'Unexpected object ID.')
 
+    now = int(time.time())
+
+    servicegroup = reqobj.get('servicegroup')
+    author = reqobj.get('author', 'nagios-api')
+    comment = reqobj.get('comment', 'schedule downtime')
+    start_time = reqobj.get('start_time', now)
+    fixed = reqobj.get('fixed', 1)
+    try:
+        dur = int(reqobj.get('duration', 0))
+    except ValueError:
+        dur = 0
+    end_time = reqobj.get('end_time', start_time + dur)
+
+    if servicegroup is None:
+        return json_error(req, 'Servicegroup not specified.')
+    if fixed == 1:
+        # duration is unused by Nagios for fixed downtime
+        dur = 0
+    else: # flexible downtime
+        # The Nagios C code defines duration as an unsigned long
+        if dur < 1 or dur > 4294967295:
+            return json_error(req, 'Flexible dowtime duration must be between 1 and 4,294,967,295 seconds')
+
+    if not send_nagios_command('SCHEDULE_SERVICEGROUP_SVC_DOWNTIME', servicegroup, start_time,
+                                end_time, fixed, 0, dur, author, comment):
+        return json_error(req, 'Failed sending command to Nagios.')
+    return json_response(req, 'scheduled')
 
 def http_submit_result(req, objid, reqobj):
     '''Submits a check result for a host or service. This is mostly used
@@ -931,23 +779,18 @@ def http_handler(req):
             'problems': http_problems,
             'status': http_status,
             'service': http_service,
-            'restart_nagios': http_restart_nagios
         },
         'POST': {
             'cancel_downtime': http_cancel_downtime,
             'schedule_downtime': http_schedule_downtime,
             'schedule_hostgroup_downtime': http_schedule_hostgroup_downtime,
-            'disable_notifications': http_disable_notifications,
-            'enable_notifications': http_enable_notifications,
-            'disable_checks': http_disable_checks,
-            'enable_checks': http_enable_checks,
+            'schedule_servicegroup_downtime': http_schedule_servicegroup_downtime,
             'submit_result': http_submit_result,
             'acknowledge_problem': http_acknowledge_problem,
             'remove_acknowledgement': http_remove_acknowledgement,
             'add_comment': http_add_comment,
             'delete_comment': http_delete_comment,
             'schedule_check': http_schedule_check,
-            'update_host': http_update_host,
             'raw_command': http_send_raw_command
         }
     }
