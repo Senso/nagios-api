@@ -16,7 +16,7 @@
 
 NAME=nagios-api
 PIDFILE=/var/run/$NAME.pid
-DAEMON=/usr/share/python/nagios-api/bin/nagios-api
+DAEMON=/var/lib/nagios/nagios-api/nagios-api
 
 # Sourcing default
 . /etc/default/$NAME

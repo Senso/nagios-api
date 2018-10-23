@@ -1,19 +1,19 @@
 # Nagios-api default configuraiton file
 
 # Port used by nagios-api
-PORT=6315
+PORT=8080
 
 # Nagios command file
-NAGIOS_COMMAND=/var/lib/nagios3/rw/nagios.cmd
+NAGIOS_COMMAND=/usr/local/nagios/var/rw/nagios.cmd
 
 # Nagios status file (status.dat)
-NAGIOS_STATUS=/var/cache/nagios3/status.dat
+NAGIOS_STATUS=/usr/local/nagios/var/status.dat
 
 # Nagios log file
-NAGIOS_LOG=/var/log/nagios3/nagios.log
+NAGIOS_LOG=/var/log/nagios/nagios.log
 
 # Nagios-api log file
-LOGFILE=/var/log/nagios3/nagios-api.log
+LOGFILE=/var/log/nagios/nagios-api.log
 
 # Additional options
-#OPTION="-o '*'"
+OPTION="-b 127.0.0.1"
