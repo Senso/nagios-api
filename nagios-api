@@ -418,51 +418,6 @@ def http_schedule_servicegroup_downtime(req, objid, reqobj):
         return json_error(req, 'Failed sending command to Nagios.')
     return json_response(req, 'scheduled')
 
-def http_submit_result(req, objid, reqobj):
-    '''Submits a check result for a host or service. This is mostly used
-    for passive services where Nagios is not responsible for doing the
-    checks itself.
-
-    As with other APIs, you are required to supply a host parameter and
-    you may supply a service. The output parameter is an opaque string
-    that gets given to Nagios. Use the status parameter to specify an
-    integer return code.
-
-    Host status codes: 0 = UP, 1 = DOWN, 2 = UNREACHABLE.
-    Service status codes: 0 = OK, 1 = WARNING, 2 = CRITICAL, 3 = UNKNOWN.
-
-    '''
-    global NAGIOS, CMD_ENABLED
-    if not CMD_ENABLED:
-        return json_error(req, 'External commands not enabled on nagios-api.')
-
-    host = reqobj.get('host')
-    service = reqobj.get('service')
-
-    obj = NAGIOS.host_or_service(host, service)
-    if obj is None:
-        return json_error(req, 'Failed to find host or service to update.')
-
-    if 'status' not in reqobj:
-        return json_error(req, 'Required parameter "status" not found.')
-    if 'output' not in reqobj:
-        return json_error(req, 'Required parameter "output" not found.')
-
-    try:
-        status = int(reqobj['status'])
-    except ValueError:
-        return json_error(req, 'Invalid status provided.')
-
-    if obj.service is not None:
-        if not send_nagios_command('PROCESS_SERVICE_CHECK_RESULT', host,
-                                   service, status, reqobj['output']):
-            return json_error(req, 'Failed sending command to Nagios.')
-    else:
-        if not send_nagios_command('PROCESS_HOST_CHECK_RESULT', host, status,
-                                   reqobj['output']):
-            return json_error(req, 'Failed sending command to Nagios.')
-    return json_response(req, 'submitted')
-
 
 def http_acknowledge_problem(req, objid, reqobj):
     '''Submits an acknowledgement of a host or service problem. This is used
@@ -771,13 +726,8 @@ def http_handler(req):
     # Dispatch table goes here
     dispatch = {
         'GET': {
-            'log': http_log,
-            'state': http_state,
-            'objects': http_objects,
             'host': http_host,
             'service': http_service,
-            'problems': http_problems,
-            'status': http_status,
             'service': http_service,
         },
         'POST': {
@@ -785,13 +735,9 @@ def http_handler(req):
             'schedule_downtime': http_schedule_downtime,
             'schedule_hostgroup_downtime': http_schedule_hostgroup_downtime,
             'schedule_servicegroup_downtime': http_schedule_servicegroup_downtime,
-            'submit_result': http_submit_result,
             'acknowledge_problem': http_acknowledge_problem,
             'remove_acknowledgement': http_remove_acknowledgement,
-            'add_comment': http_add_comment,
-            'delete_comment': http_delete_comment,
             'schedule_check': http_schedule_check,
-            'raw_command': http_send_raw_command
         }
     }
 
