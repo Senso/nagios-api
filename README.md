@@ -197,45 +197,6 @@ comment associated with it is deleted.
 The name of the author. This is useful in UIs if you want
 to disambiguate who is doing what.
 
-### `add_comment`
-For a given host and/or service, add a comment. This is free-form text that can
-include whatever you want and is visible in the Nagios UI and API output.
-
-```
-{
-  "host": "string",
-  "service": "string",
-  "comment": "string",
-  "persistent: true,
-  "author": "string"
-}
-```
-
-#### Fields
-`host` = `STRING [required]`
-
-Which host to act on.
-
-`service` = `STRING [optional]`
-
-If specified, act on this service.
-
-`comment` = `STRING [required]`
-
-This is required and should contain the text of the comment you want to
-add to this host or service.
-
-`persistent` = `BOOL [optional]`
-
-Optional, default FALSE. If this is enabled, the comment given will stay
-on the host or service until deleted manually. By default, they only stay
-until Nagios is restarted.
-
-`author` = `STRING [optional]`
-
-The name of the author. This is useful in UIs if you want
-to disambiguate who is doing what.
-
 ### `cancel_downtime`
 Very simply, this immediately lifts a downtime that is currently in
 effect on a host or service. If you know the `downtime_id`, you can
@@ -273,106 +234,8 @@ If true and you have not specified a `service` in
 specific, then we will cancel all downtimes on this host and all of
 the services it has.
 
-### `disable_notifications`
-This disables alert notifications on a host or service. (As an operational
-note, you might want to schedule downtime instead. Disabling notifications
-has a habit of leaving things off and people forgetting about it.)
-
-```
-{
-  "host": "string",
-  "service": "string"
-}
-```
-
-#### Fields
-`host` = `STRING [required]`
-
-Which host to act on.
-
-`service` = `STRING [optional]`
-
-If specified, act on this service.
-
-### `delete_comment`
-Deletes comments from a host or service. Can be used to delete all comments or
-just a particular comment.
-
-```
-{
-  "host": "string",
-  "service": "string",
-  "comment_id": 1234
-}
-```
-
-#### Fields
-`host` = `STRING [required]`
-
-Which host to act on.
-
-`service` = `STRING [optional]`
-
-If specified, act on this service.
-
-`comment_id` = `INTEGER [required]`
-
-The ID of the comment you wish to delete. You may set this to `-1` to delete
-all comments on the given host or service.
-
-### `enable_notifications`
-This enables alert notifications on a host or service.
-
-```
-{
-  "host": "string",
-  "service": "string"
-}
-```
-
-#### Fields
-`host` = `STRING [required]`
-
-Which host to act on.
-
-`service` = `STRING [optional]`
-
-If specified, act on this service.
-
-### `log`
-Simply returns the most recent 1000 items in the Nagios event log. These
-are currently unparsed. There is a plan to parse this in the future and
-return event objects.
-
 ### `status`
 Simply returns a JSON that contains nagios status objects.
-
-### `restart_nagios`
-Restarts the nagios service.
-
-### `update_host`
-This method will create/update a nagios configuration file that contains devices.
-
-```
-{
-  "file_name": "string",
-  "text": "string"
-}
-```
-
-#### Fields
-`file_name` = `STRING [required]`
-
-File name for the configuration.
-
-`text` = `STRING [required]`
-
-Content of the configuration file.
-
-### `objects`
-Returns a dict with the key being hostnames and the values being a list
-of services defined for that host. Use this method to get the contents
-of the world -- i.e., all hosts and services.
 
 ### `remove_acknowledgement`
 This method cancels an acknowledgement on a host or service.
@@ -537,67 +400,6 @@ not the downtimes have been scheduled or if a different error occurred.
 We do not have the ability to get the `downtime_id` that is generated,
 unfortunately, as that would require waiting for Nagios to regenerate
 the status file.
-
-### `state`
-This method takes no parameters. It returns a large JSON object
-containing all of the active state from Nagios. Included are all hosts,
-services, downtimes, comments, and other things that may be in the
-global state object.
-
-### `submit_result`
-If you are using passive service checks or you just want to submit a
-result for a check, you can use this method to submit your result to
-Nagios.
-
-```
-{
-  "host": "string",
-  "service": "string",
-  "status": 1234,
-  "output": "string"
-}
-```
-
-#### Fields
-`host` = `STRING [required]`
-
-The host to submit a result for.  This is required.
-
-`service` = `STRING [optional]`
-
-If specified, we will submit a result for this service on
-the above host. If not specified, then the result will be submitted
-for the host itself.
-
-`status` = `INTEGER [required]`
-
-The status code to set this host/service check to. If you are
-updating a host's status: 0 = OK, 1 = DOWN, 2 = UNREACHABLE. For
-service checks, 0 = OK, 1 = WARNING, 2 = CRITICAL, 3 = UNKNOWN.
-
-`output` = `STRING [required]`
-
-The plugin output to be displayed in the UI and stored.  This is a
-single line of text, normally returned by checkers.
-
-The response indicates if we successfully wrote the command to the log.
-
-## Docker
-A Docker container is available for convenience. It needs to be run on
-the same server as the nagios installation.
-
-First determine the location of the `status.dat`, `nagios.log`, and
-`nagios.cmd` files. Map these files into the Docker container. The
-container can be started using the following command:
-
-```
-docker run -v /var/lib/nagios3/rw/nagios.cmd:/opt/nagios.cmd \
--v /var/cache/nagios3/status.dat:/opt/status.dat \
--v /var/log/nagios3/nagios.log:/opt/nagios.log \
--p 2337:8080 inventid/nagios-python-api
-```
-
-In the above case, the API will be exposed on port 2337.
 
 ## Author
 Written by Mark Smith <mark@qq.is> while under the employ of Bump

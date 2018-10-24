@@ -728,7 +728,6 @@ def http_handler(req):
         'GET': {
             'host': http_host,
             'service': http_service,
-            'service': http_service,
         },
         'POST': {
             'cancel_downtime': http_cancel_downtime,
